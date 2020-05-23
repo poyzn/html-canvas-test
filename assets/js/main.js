@@ -1,5 +1,49 @@
+class Box {
+    constructor(ctx, props) {
+        this.ctx    = ctx;
+        this.posX   = ctx.canvas.clientWidth;
+        this.posY   = 420;
+        this.speed  = props.globalSpeed;
+    }
+    draw() {        
+        this.posX -= this.speed;
+        this.ctx.fillRect(this.posX, this.posY, 80, 80);
+    }
+    isCollision(charactor) {
+        const distance = Math.sqrt(Math.pow(Math.abs(this.posX - character.posX), 2) + Math.pow(Math.abs(this.posY - character.posY), 2))
+        return (distance < 110) ? true : false
+    }
+}
+
+class BoxGenerator {
+    constructor(ctx, props) {
+        this.props  = props
+        this.ctx    = ctx;
+        this.num    = 2;
+        this.boxes  = [];
+    }
+    run() {
+        const boxes = this.boxes.filter(el => { if (el.posX > -100) return el });
+        if (boxes.length < this.num) {
+            if (Math.random() > 0.99) {
+                boxes.push(new Box(this.ctx, this.props));
+            }
+        }
+        boxes.map(el => el.draw(this.ctx));
+        this.boxes = boxes;
+    }
+    checkCollisions(character) {
+        this.boxes.map(box => {
+            if (box.isCollision(character)) {
+                console.log('collision')
+            }
+        })
+    }
+}
+
 class Character {
-    constructor(ctx) {
+    constructor(ctx, props) {
+        this.props          = props
         this.ctx            = ctx
         this.jumped         = false;
         this.imageSrc       = 'assets/images/character.png';
@@ -14,7 +58,7 @@ class Character {
         this.frameWidth     = 0;
         this.frame          = 0;
         this.spriteShift    = 0;
-        this.frameFreq      = 5;
+        this.frameFreq      = props.characterFreq;
         this.img            = this.loadImage();
     }
     draw() {
@@ -25,8 +69,7 @@ class Character {
         this.ctx.drawImage(this.img,
             frame, 0, this.frameWidth, this.frameHeight,
             this.posX, this.posY, this.frameWidth, this.frameHeight);
-        }
-        
+        }   
     findFrame() {
         this.frame += 1;
         if (!this.jumped && this.frame % this.frameFreq == 0) {
@@ -35,7 +78,6 @@ class Character {
         }
         return (this.spriteShift % this.imageFrames) * this.frameWidth;
     }
-
     jump() {
         if (this.jumped === true) return;
         
@@ -72,10 +114,11 @@ class BackgroundItem {
 }
 
 class Background {
-    constructor(ctx, level = 1) {
+    constructor(ctx, props, level = 1) {
+        this.props  = props
         this.ctx    = ctx
         this.src    = this.resolveBgImage(level);
-        this.speed  = 5;
+        this.speed  = props.globalSpeed;
         this.img    = this.createImage()
         this.items  = [new BackgroundItem(this.ctx, this.img)];
     }
@@ -103,25 +146,34 @@ class Background {
     }
 }
 
+// Initialize stage
 const c = document.getElementById('stage');
 c.width = 800;
 c.height = 600;
 const ctx = c.getContext('2d');
-const background = new Background(ctx);
-const character = new Character(ctx)
 
+// Initialize objects
+const stageProps = {
+    globalSpeed: 15,
+    characterFreq: 3
+}
+const background = new Background(ctx, stageProps);
+const character = new Character(ctx, stageProps)
+const boxGenerator = new BoxGenerator(ctx, stageProps)
+
+// Run loop
 function run() {
-    window.addEventListener('keypress', (e) => {
+    window.addEventListener('keypress', e => {
         e.preventDefault()
         character.jump()
     });
 
     ctx.clearRect(0, 0, c.width, c.height);
-    background.draw()
-    character.draw()
+    background.draw(stageProps)
+    character.draw(stageProps)
+    boxGenerator.run(stageProps)
+    boxGenerator.checkCollisions(character)
     window.requestAnimationFrame(run);
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    run()
-})
+document.addEventListener('DOMContentLoaded', e => run());
